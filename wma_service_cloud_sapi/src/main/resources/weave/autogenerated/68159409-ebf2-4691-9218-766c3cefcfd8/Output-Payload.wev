@@ -1,0 +1,28 @@
+%dw 2.0
+
+type auto_68159409_ebf2_4691_9218_766c3cefcfd8_Output_Payload = {
+  country: String, 
+  kycStatus: String, 
+  individual: String, 
+  city: String, 
+  recordType: String, 
+  postalCode: String, 
+  industry: String, 
+  agencyCode: String, 
+  title: String, 
+  expiryDate: String, 
+  internalReferrer: String, 
+  phone: String, 
+  street: String, 
+  name: String, 
+  employer: String, 
+  household: String, 
+  company: String, 
+  id: String, 
+  salutation: String, 
+  state: String, 
+  email: String, 
+  status: String, 
+  _?: Any
+}
+

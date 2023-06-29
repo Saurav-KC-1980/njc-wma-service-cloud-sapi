@@ -1,0 +1,12 @@
+[
+    {
+      "Id": "ad001",
+      "Name": "Amar",
+      "Type": "Individual"
+    },
+    {
+      "Id": "ad002",
+      "Name": "Bohman Brothers Ltd",
+      "Type": "Agency"
+    }
+  ]

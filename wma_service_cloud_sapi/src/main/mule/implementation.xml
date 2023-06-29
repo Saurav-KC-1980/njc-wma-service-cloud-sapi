@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="getAgencyData" doc:id="a315b184-3161-4b15-8977-d9d30ba157c0" >
+		<salesforce:query doc:name="Get Agency Details" doc:id="4d265413-0fc9-4ab9-844d-e964ca9cfe2a" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Name,Agency_Code__c,Agency_Type__c,Parent_Agency_Code__c,Agency_Bank_Account_Name__c,Agency_Bank_Account_Number__c,Agency_Sort_Code__c FROM Agency_Code__c]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<set-variable value="#[[]]" doc:name="agencyOutput" doc:id="ff9be49e-79e1-4932-a143-d346adaca510" variableName="agencyOutput"/>
+		<foreach doc:name="For Each" doc:id="a169b5d0-0dd7-474f-a3f0-155eefd55022" >
+			<choice doc:name="Choice" doc:id="5edefd0c-2eb5-43f1-a274-0199382f1197" >
+				<when expression="#[payload.Parent_Agency_Code__c != null]">
+					<salesforce:query doc:name="Get Parent Agency" doc:id="571004df-4cf3-4526-b30b-59a6a8177743" config-ref="Salesforce_Config" target="parentAgency" targetValue="#[output application/json --- payload]">
+				<salesforce:salesforce-query><![CDATA[SELECT Name FROM Agency_Code__c WHERE Id = ':id']]></salesforce:salesforce-query>
+				<salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"id" : payload.Parent_Agency_Code__c
+}]]]></salesforce:parameters>
+			</salesforce:query>
+					<ee:transform doc:name="Java to Json" doc:id="fa6c0c56-25a3-4812-afd2-bc0519656652">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+ {
+	name: payload.Name default "",
+	code: payload.Agency_Code__c default "",
+	"type": payload.Agency_Type__c default "",
+	parentAgencyName: vars.parentAgency[0].Name,
+	bankAccountName: payload.Agency_Bank_Account_Name__c default "",
+	bankAccountNumber: payload.Agency_Bank_Account_Number__c default "",
+	sortCode: payload.Agency_Sort_Code__c as String default ""
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+					<set-variable value="#[output application/json --- vars.agencyOutput + payload]" doc:name="agencyOutput" doc:id="c1ef856c-3ab3-43c3-8ff8-f7f24132dced" variableName="agencyOutput" />
+				</when>
+				<otherwise >
+					<ee:transform doc:name="Java to Json" doc:id="c3318d64-18b8-46e9-a356-a30acdddea06" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+ {
+	name: payload.Name default "",
+	code: payload.Agency_Code__c default "",
+	"type": payload.Agency_Type__c default "",
+	parentAgencyName: payload.parentAgency.Name,
+	bankAccountName: payload.Agency_Bank_Account_Name__c default "",
+	bankAccountNumber: payload.Agency_Bank_Account_Number__c default "",
+	sortCode: payload.Agency_Sort_Code__c as String default ""
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<set-variable value="#[output application/json --- vars.agencyOutput + payload]" doc:name="agencyOutput" doc:id="0135a5bf-6a61-4ef1-9aaf-6aaa9210bb3f" variableName="agencyOutput" />
+				</otherwise>
+			</choice>
+		</foreach>
+		<set-payload value="#[output application/json --- vars.agencyOutput]" doc:name="Set Payload" doc:id="c493e3f4-0fe4-414e-9a08-ffc8e1766415" />
+		<ee:transform doc:name="remove null fields" doc:id="175269fb-f61b-4d8a-8fd8-8484a1c84df6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+---
+agencies: payload map (obj) -> obj filterObject ((value) -> value != "")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="1e6c5fe4-dd65-48e0-8850-f74cce8520cb" />
+		<error-handler ref="errorError_Handler" />
+	</flow>
+	<flow name="getLeadDetails" doc:id="e226777c-aec8-4bd0-a4d7-019ffca16b28">
+		<salesforce:query doc:name="Query" doc:id="41f80b42-47da-4297-aaa0-172576c041ad" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Id,Name,Salutation,RecordTypeId,Title,Company,Street,City,State,PostalCode,Country,MobilePhone,Email,KYC__c,FinServ__Employer__c,Agency_Code__c,Expiry_Date__c,FinServ__Household__c,IndividualId,Industry,FinServ__ReferredByUser__c,Status from Lead ]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<ee:transform doc:name="Java to Json" doc:id="53b09bdd-b402-401f-bb15-a0b9703242d3">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	id: payload01.Id default "",
+	salutation: payload01.Salutation default "",
+	name: payload01.Name default "",
+	title: payload01.Title default "",
+	company: payload01.Company default "",
+	email: payload01.Email default "",
+	phone: payload01.MobilePhone default "",
+	street: payload01.Street default "",
+	city: payload01.City default "",
+	state: payload01.State default "",
+	country: payload01.Country default "",
+	postalCode: payload01.PostalCode default "",
+	recordType: payload01.RecordTypeId default "",
+	kycStatus: payload01.KYC__c default "",
+	employer: payload01.FinServ__Employer__c default "",
+	expiryDate: payload01.Expiry_Date__c as String default "",
+	household: payload01.FinServ__Household__c default "",
+	individual: payload01.IndividualId default "",
+	industry: payload01.Industry default "",
+	internalReferrer: payload01.FinServ__ReferredByUser__c default "",
+	status: payload01.Status default "",
+	agencyCode: payload01.Agency_Code__c as String default ""
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[[]]" doc:name="transformedData" doc:id="6553ffea-4209-4738-87d0-be6e96598d47" variableName="transformedData"/>
+		<foreach doc:name="For Each" doc:id="32710929-deb3-4ee5-b776-33ba09df778f" >
+			<salesforce:query doc:name="Query" doc:id="1dc7422a-50d4-4453-8380-d30f39cf15c9" config-ref="Salesforce_Config" target="agencyObject" targetValue="#[output application/json --- payload]" >
+				<salesforce:salesforce-query ><![CDATA[SELECT Agency_Code__c,Name,Agency_Type__c FROM Agency_Code__c WHERE Id = ':id']]></salesforce:salesforce-query>
+				<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"id" : payload.agencyCode
+}]]]></salesforce:parameters>
+			</salesforce:query>
+			<ee:transform doc:name="Transform Message" doc:id="d9802fc8-0320-4bd7-ae99-c00eeaa33dd2" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+ {
+	id: payload.id,
+	salutation: payload.salutation,
+	name: payload.name,
+	title: payload.title,
+	company: payload.company,
+	email: payload.email,
+	phone: payload.phone,
+	street: payload.street,
+	city: payload.city,
+	state: payload.state,
+	country: payload.country,
+	postalCode: payload.postalCode,
+	kycStatus: payload.kycStatus,
+	employer: payload.employer,
+	expiryDate: payload.expiryDate,
+	household: payload.household,
+	individual: payload.individual,
+	industry: payload.industry,
+	status: payload.status,
+	agency: {
+		code: vars.agencyObject[0].Agency_Code__c,
+		name: vars.agencyObject[0].Name,
+		"type": vars.agencyObject[0].Agency_Type__c
+	}
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<set-variable value="#[output application/json --- vars.transformedData + payload]" doc:name="transformedData" doc:id="4ca2f8aa-a016-4df8-8dca-39f4a134eaf7" variableName="transformedData" />
+		</foreach>
+		<set-payload value="#[output application/json --- vars.transformedData]" doc:name="Set Payload" doc:id="467b7ffb-5dc9-4206-b344-a8220cca1a98" />
+		<ee:transform doc:name="remove null values" doc:id="f517506b-dd69-4c1e-9ecf-41000538b243" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+---
+leads: payload map (obj) -> obj filterObject ((value) -> value != '')]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="93e20582-4c34-44c9-8701-82fe8df93498" />
+		<error-handler ref="errorError_Handler" />
+	</flow>
+	<flow name="getLeadById" doc:id="68159409-ebf2-4691-9218-766c3cefcfd8" >
+		<salesforce:query doc:name="Get Lead Details" doc:id="a7670a4a-cfdd-4ab7-b140-8f1795187ea6" config-ref="Salesforce_Config" >
+			<salesforce:salesforce-query ><![CDATA[SELECT Id,Name,Salutation,RecordTypeId,Title,Company,Street,City,State,PostalCode,Country,MobilePhone,Email,KYC__c,FinServ__Employer__c,Agency_Code__c,Expiry_Date__c,FinServ__Household__c,IndividualId,Industry,FinServ__ReferredByUser__c,Status from Lead  WHERE Id = ':Id']]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"Id" : attributes.uriParams.id
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Java to Json" doc:id="06dee01b-22f7-4280-9033-76663cf30faa" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	id: payload01.Id default "",
+	salutation: payload01.Salutation default "",
+	name: payload01.Name default "",
+	title: payload01.Title default "",
+	company: payload01.Company default "",
+	email: payload01.Email default "",
+	phone: payload01.MobilePhone default "",
+	street: payload01.Street default "",
+	city: payload01.City default "",
+	state: payload01.State default "",
+	country: payload01.Country default "",
+	postalCode: payload01.PostalCode default "",
+	recordType: payload01.RecordTypeId default "",
+	kycStatus: payload01.KYC__c default "",
+	employer: payload01.FinServ__Employer__c default "",
+	expiryDate: payload01.Expiry_Date__c as String default "",
+	household: payload01.FinServ__Household__c default "",
+	individual: payload01.IndividualId default "",
+	industry: payload01.Industry default "",
+	internalReferrer: payload01.FinServ__ReferredByUser__c default "",
+	status: payload01.Status default "",
+	agencyCode: payload01.Agency_Code__c as String default ""
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:query doc:name="Agency" doc:id="916a540d-ee51-4658-962a-64ee2161ecde" config-ref="Salesforce_Config" target="agencyObject" targetValue="#[output application/json --- payload]">
+			<salesforce:salesforce-query><![CDATA[SELECT Agency_Code__c,Name,Agency_Type__c FROM Agency_Code__c WHERE Id = ':id']]></salesforce:salesforce-query>
+			<salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"id" : payload[0].agencyCode
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="dbd03ad4-50c1-4532-93fa-b9661f6210bd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	id: payload01.id,
+	salutation: payload01.salutation,
+	name: payload01.name,
+	title: payload01.title,
+	company: payload01.company,
+	email: payload01.email,
+	phone: payload01.phone,
+	street: payload01.street,
+	city: payload01.city,
+	state: payload01.state,
+	country: payload01.country,
+	postalCode: payload01.postalCode,
+	kycStatus: payload01.kycStatus,
+	employer: payload01.employer,
+	expiryDate: payload01.expiryDate,
+	household: payload01.household,
+	individual: payload01.individual,
+	industry: payload01.industry,
+	status: payload01.status,
+	agency: {
+		code: vars.agencyObject[0].Agency_Code__c,
+		name: vars.agencyObject[0].Name,
+		"type": vars.agencyObject[0].Agency_Type__c
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="remove null fields" doc:id="2eec928a-a2de-4bcf-b8ac-da0f3eb05b38">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+---
+lead: payload[0] filterObject ((value) -> value != "")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="0eea2ae7-5f78-4b52-b84e-a87631eb7c49" />
+		<error-handler ref="errorError_Handler" />
+	</flow>
+	<flow name="getAgencyByCode" doc:id="c6e306a5-dc90-471b-8149-b9ef6961e540" >
+		<salesforce:query doc:name="Get Agency Details" doc:id="681648c6-4d95-4073-a786-e38cf2a1c922" config-ref="Salesforce_Config" >
+			<salesforce:salesforce-query ><![CDATA[SELECT Name,Agency_Code__c,Agency_Type__c,Parent_Agency_Code__c,Agency_Bank_Account_Name__c,Agency_Bank_Account_Number__c,Agency_Sort_Code__c FROM Agency_Code__c WHERE Agency_Code__c = ':code']]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"code" : attributes.uriParams.code
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<salesforce:query doc:name="Get Parent Agency" doc:id="c81b0942-8918-4f09-bfc5-60625adf9816" config-ref="Salesforce_Config" target="parentAgency" targetValue="#[output application/json --- payload]">
+			<salesforce:salesforce-query><![CDATA[SELECT Name FROM Agency_Code__c WHERE Id = ':id']]></salesforce:salesforce-query>
+			<salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"id" : payload[0].Parent_Agency_Code__c
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Java to Json" doc:id="6e81fc20-b247-4c53-bbbe-d85e0bf7c178">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+ {
+	name: payload[0].Name default "",
+	code: payload[0].Agency_Code__c default "",
+	"type": payload[0].Agency_Type__c default "",
+	parentAgencyName: vars.parentAgency[0].Name,
+	bankAccountName: payload[0].Agency_Bank_Account_Name__c default "",
+	bankAccountNumber: payload[0].Agency_Bank_Account_Number__c default "",
+	sortCode: payload[0].Agency_Sort_Code__c as String default ""
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="remove null fields" doc:id="2f2b9325-e06c-4106-a521-541006aa2ba7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+---
+agency:payload filterObject ((value) -> value != "" and not isEmpty(value))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="37c9228d-743d-4acb-81a8-55bac846240f" />
+		<error-handler ref="errorError_Handler" />
+	</flow>
+</mule>

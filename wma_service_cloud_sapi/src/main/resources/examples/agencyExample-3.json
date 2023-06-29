@@ -1,0 +1,22 @@
+[
+    {
+      "name": "Capstone Advisory Firm",
+      "code": "99X3332",
+      "type": "Firm",
+      "parentAgency": "",
+      "bankAccountName": "",
+      "BankAccountNumber": "",
+      "sortCode": ""
+
+    },
+    {
+      "name": "John Maxwell",
+      "code": "8X98234",
+      "type": "Individual",
+      "parentAgency": "Allard Advisory Management",
+      "bankAccountName": "",
+      "BankAccountNumber": "",
+      "sortCode": ""
+    }
+  ]
+

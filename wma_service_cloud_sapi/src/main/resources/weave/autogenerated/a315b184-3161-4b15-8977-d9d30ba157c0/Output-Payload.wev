@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_a315b184_3161_4b15_8977_d9d30ba157c0_Output_Payload = Array<{  bankAccountName: String,   code: String,   parentAgencyCode: String,   name: String,   bankAccountNumber: String,   "type": String,   sortCode: String,   _?: Any}>
+

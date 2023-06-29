@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <apikit:config name="njc-wma-service-cloud-sapi-2-config" api="resource::b0beec90-c6cc-4c36-8f7c-ef1f8f91253b:njc-wma-service-cloud-sapi:1.0.1:raml:zip:njc-wma-service-cloud-sapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="njc-wma-service-cloud-sapi-2-main">
+        <http:listener path="/api/*" config-ref="HTTP_Listener_config">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="njc-wma-service-cloud-sapi-2-config" />
+		<error-handler ref="errorError_Handler" />
+        
+    </flow>
+    <flow name="njc-wma-service-cloud-sapi-2-console">
+        <http:listener path="/console/*" config-ref="HTTP_Listener_config">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="njc-wma-service-cloud-sapi-2-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\agency:njc-wma-service-cloud-sapi-2-config">
+		<flow-ref doc:name="getAgencyData" doc:id="0b25d3e8-85ff-422a-84da-cc1691b8d01c" name="getAgencyData"/>
+		<error-handler ref="errorError_Handler" />
+    </flow>
+    <flow name="get:\lead:njc-wma-service-cloud-sapi-2-config">
+		<flow-ref doc:name="getLeadDetails" doc:id="a9543f73-65c3-4a84-8289-3c3ec445a16c" name="getLeadDetails"/>
+		<error-handler ref="errorError_Handler" />
+    </flow>
+    <flow name="get:\agency\(code):njc-wma-service-cloud-sapi-2-config">
+		<flow-ref doc:name="getAgencyByCode" doc:id="056436b6-3ae8-4544-8057-7d8a198f5ec7" name="getAgencyByCode"/>
+		<error-handler ref="errorError_Handler" />
+    </flow>
+    <flow name="get:\lead\(id):njc-wma-service-cloud-sapi-2-config">
+		<flow-ref doc:name="getLeadById" doc:id="7c589aa7-9113-415f-bea4-dc310d594a63" name="getLeadById"/>
+		<error-handler ref="errorError_Handler" />
+    </flow>
+</mule>
